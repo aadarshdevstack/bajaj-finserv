@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import './App.css';
 
-const API_URL = 'http://localhost:5000/tickets';
+const BASE = import.meta.env.VITE_BASE_URI || 'http://localhost:8000';
+const API_URL = `${BASE}/api/v1/tickets`;
 const STATUS_ORDER = ['open', 'in_progress', 'resolved', 'closed'];
 
 function App() {
@@ -84,11 +85,31 @@ function App() {
         axios.get(`${API_URL}/stats`)
       ]);
 
-      if (ticketsRes.data.success) {
-        setTickets(ticketsRes.data.data);
+      if (ticketsRes.data && ticketsRes.data.success) {
+        // backend returns { success: true, tickets: [...] }
+        setTickets(ticketsRes.data.tickets || ticketsRes.data.data || []);
       }
-      if (statsRes.data.success) {
-        setStats(statsRes.data.stats);
+      if (statsRes.data && statsRes.data.success) {
+        // normalize backend stats shape into frontend expected shape
+        const s = statsRes.data;
+        const statusCounts = { open: 0, in_progress: 0, resolved: 0, closed: 0 };
+        const priorityCounts = { low: 0, medium: 0, high: 0, urgent: 0 };
+
+        (s.statusStats || []).forEach((st) => {
+          statusCounts[st._id] = st.count;
+        });
+        (s.priorityStats || []).forEach((pt) => {
+          priorityCounts[pt._id] = pt.count;
+        });
+
+        setStats({
+          totalTickets: (s.statusStats || []).reduce((a, b) => a + (b.count || 0), 0),
+          statusCounts,
+          priorityCounts,
+          breachedCount: s.slaBreachedCount || s.breachedCount || 0,
+          avgAgeOpenMinutes: s.avgAgeOpenMinutes || 0,
+          avgResolutionTimeMinutes: s.avgResolutionTimeMinutes || 0
+        });
       }
     } catch (err) {
       console.error('Error fetching data:', err);
