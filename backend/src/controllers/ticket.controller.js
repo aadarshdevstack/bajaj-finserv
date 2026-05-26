@@ -1,5 +1,5 @@
-import { Ticket } from "../models/Ticket.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { Ticket } from "../model/ticket.model.js";
+import { asyncHandler } from "../utils/AsyncHandler.js";
 
 export const createTicket = asyncHandler(async (req, res) => {
   const ticket = await Ticket.create(req.body);
